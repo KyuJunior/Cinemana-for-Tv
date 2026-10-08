@@ -17,6 +17,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
 
+  // Performance: Configure high-capacity image cache for smooth TV poster grid scrolling
+  PaintingBinding.instance.imageCache.maximumSize = 1000;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 150 << 20; // 150 MB
+
   // Set system UI to immersive TV fullscreen
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
@@ -56,6 +60,8 @@ class TVMainShell extends StatefulWidget {
 
 class _TVMainShellState extends State<TVMainShell> {
   TVNavDestination _currentDestination = TVNavDestination.home;
+  final Set<TVNavDestination> _loadedDestinations = {TVNavDestination.home};
+
   final FocusScopeNode _dockFocusScope = FocusScopeNode();
   final FocusScopeNode _contentFocusScope = FocusScopeNode();
 
@@ -82,21 +88,21 @@ class _TVMainShellState extends State<TVMainShell> {
     });
   }
 
-  Widget _buildBody() {
-    switch (_currentDestination) {
-      case TVNavDestination.search:
-        return TVSearchScreen(onNavigateLeft: _focusDock);
-      case TVNavDestination.home:
-        return TVHomeScreen(onNavigateLeft: _focusDock);
-      case TVNavDestination.movies:
-        return TVMoviesScreen(onNavigateLeft: _focusDock);
-      case TVNavDestination.series:
-        return TVSeriesScreen(onNavigateLeft: _focusDock);
-      case TVNavDestination.favorites:
-        return TVFavoritesScreen(onNavigateLeft: _focusDock);
-      case TVNavDestination.settings:
-        return const TVSettingsScreen();
-    }
+  Widget _buildTab(TVNavDestination destination, Widget Function() builder) {
+    final isCurrent = _currentDestination == destination;
+    final isLoaded = _loadedDestinations.contains(destination);
+
+    return FocusScope(
+      canRequestFocus: isCurrent,
+      skipTraversal: !isCurrent,
+      child: TickerMode(
+        enabled: isCurrent,
+        child: Offstage(
+          offstage: !isCurrent,
+          child: isLoaded ? builder() : const SizedBox.shrink(),
+        ),
+      ),
+    );
   }
 
   @override
@@ -118,25 +124,27 @@ class _TVMainShellState extends State<TVMainShell> {
                 onDestinationSelected: (destination) {
                   setState(() {
                     _currentDestination = destination;
+                    _loadedDestinations.add(destination);
                   });
                   _focusContent();
                 },
               ),
             ),
 
-            // Main Content Area
+            // Main Content Area with Lazy Multi-Tab State Preservation
             Expanded(
               child: FocusScope(
                 node: _contentFocusScope,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
-                  child: KeyedSubtree(
-                    key: ValueKey(_currentDestination),
-                    child: _buildBody(),
-                  ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _buildTab(TVNavDestination.home, () => TVHomeScreen(onNavigateLeft: _focusDock)),
+                    _buildTab(TVNavDestination.movies, () => TVMoviesScreen(onNavigateLeft: _focusDock)),
+                    _buildTab(TVNavDestination.series, () => TVSeriesScreen(onNavigateLeft: _focusDock)),
+                    _buildTab(TVNavDestination.search, () => TVSearchScreen(onNavigateLeft: _focusDock)),
+                    _buildTab(TVNavDestination.favorites, () => TVFavoritesScreen(onNavigateLeft: _focusDock)),
+                    _buildTab(TVNavDestination.settings, () => const TVSettingsScreen()),
+                  ],
                 ),
               ),
             ),

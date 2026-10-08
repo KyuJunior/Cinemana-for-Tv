@@ -67,7 +67,7 @@ class _TVFocusableState extends State<TVFocusable> {
             Scrollable.ensureVisible(
               context,
               alignment: 0.5,
-              duration: const Duration(milliseconds: 250),
+              duration: const Duration(milliseconds: 180),
               curve: Curves.easeOutCubic,
             );
           }
@@ -114,11 +114,11 @@ class _TVFocusableState extends State<TVFocusable> {
         },
         child: AnimatedScale(
           scale: _isFocused ? widget.scaleOnFocus : 1.0,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.fastOutSlowIn,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.fastOutSlowIn,
             decoration: BoxDecoration(
               borderRadius: effectiveBorderRadius,
               boxShadow: _isFocused && widget.showGlow

@@ -17,7 +17,10 @@ class TVSeriesScreen extends StatefulWidget {
   State<TVSeriesScreen> createState() => _TVSeriesScreenState();
 }
 
-class _TVSeriesScreenState extends State<TVSeriesScreen> {
+class _TVSeriesScreenState extends State<TVSeriesScreen> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   final List<VideoItem> _series = [];
   bool _isLoading = true;
   int _page = 0;
@@ -53,6 +56,7 @@ class _TVSeriesScreenState extends State<TVSeriesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (_isLoading && _series.isEmpty) {
       return const Center(child: CircularProgressIndicator(color: TVColors.accent));
     }
@@ -91,6 +95,8 @@ class _TVSeriesScreenState extends State<TVSeriesScreen> {
                   return false;
                 },
                 child: GridView.builder(
+                  cacheExtent: 800,
+                  addRepaintBoundaries: true,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 6,
                     childAspectRatio: 0.65,

@@ -58,6 +58,7 @@ class TVFavoritesScreen extends StatelessWidget {
                 height: 240,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
+                  cacheExtent: 600,
                   itemCount: history.length,
                   separatorBuilder: (context, index) => const SizedBox(width: 16),
                   itemBuilder: (context, index) {
@@ -143,6 +144,7 @@ class TVFavoritesScreen extends StatelessWidget {
             else
               GridView.builder(
                 shrinkWrap: true,
+                addRepaintBoundaries: true,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 6,

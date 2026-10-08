@@ -37,6 +37,10 @@ class TVHeroBanner extends StatelessWidget {
               imageUrl: video.backdropUrl,
               fit: BoxFit.cover,
               alignment: Alignment.topCenter,
+              memCacheWidth: 1280,
+              maxWidthDiskCache: 1920,
+              fadeInDuration: const Duration(milliseconds: 200),
+              fadeOutDuration: const Duration(milliseconds: 100),
               errorWidget: (context, url, error) => Container(color: TVColors.surface),
               placeholder: (context, url) => Container(color: TVColors.surface),
             )

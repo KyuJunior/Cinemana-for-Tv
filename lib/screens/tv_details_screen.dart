@@ -125,6 +125,10 @@ class _TVDetailsScreenState extends State<TVDetailsScreen> {
                 imageUrl: video.backdropUrl,
                 fit: BoxFit.cover,
                 alignment: Alignment.topCenter,
+                memCacheWidth: 1280,
+                maxWidthDiskCache: 1920,
+                fadeInDuration: const Duration(milliseconds: 200),
+                fadeOutDuration: const Duration(milliseconds: 100),
                 placeholder: (context, url) => Container(color: TVColors.background),
                 errorWidget: (context, url, error) => Container(color: TVColors.background),
               ),
@@ -502,6 +506,10 @@ class _TVDetailsScreenState extends State<TVDetailsScreen> {
                                             CachedNetworkImage(
                                               imageUrl: ep.displayThumbnail,
                                               fit: BoxFit.cover,
+                                              memCacheWidth: 340,
+                                              maxWidthDiskCache: 480,
+                                              fadeInDuration: const Duration(milliseconds: 140),
+                                              fadeOutDuration: const Duration(milliseconds: 80),
                                               errorWidget: (context, url, err) => Container(color: TVColors.surface),
                                             )
                                           else

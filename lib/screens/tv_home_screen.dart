@@ -22,7 +22,10 @@ class TVHomeScreen extends StatefulWidget {
   State<TVHomeScreen> createState() => _TVHomeScreenState();
 }
 
-class _TVHomeScreenState extends State<TVHomeScreen> {
+class _TVHomeScreenState extends State<TVHomeScreen> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -125,9 +128,12 @@ class _TVHomeScreenState extends State<TVHomeScreen> {
     _bannerTimer?.cancel();
     _bannerTimer = Timer.periodic(const Duration(seconds: 12), (timer) {
       if (mounted && _banners.isNotEmpty) {
-        setState(() {
-          _currentBannerIndex = (_currentBannerIndex + 1) % _banners.length;
-        });
+        // Only cycle banner if user is viewing near the top
+        if (!_scrollController.hasClients || _scrollController.offset < 260) {
+          setState(() {
+            _currentBannerIndex = (_currentBannerIndex + 1) % _banners.length;
+          });
+        }
       }
     });
   }
@@ -150,6 +156,7 @@ class _TVHomeScreenState extends State<TVHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (_isLoading) {
       return const Center(
         child: Column(
@@ -216,7 +223,7 @@ class _TVHomeScreenState extends State<TVHomeScreen> {
           // Hero Banner
           if (featured != null)
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 600),
+              duration: const Duration(milliseconds: 300),
               child: TVHeroBanner(
                 key: ValueKey(featured.id),
                 video: featured,

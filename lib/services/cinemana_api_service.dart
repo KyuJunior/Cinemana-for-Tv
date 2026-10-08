@@ -7,10 +7,38 @@ import '../models/subtitle_track.dart';
 import '../models/episode_item.dart';
 import '../models/intro_interval.dart';
 
+class _CacheEntry {
+  final dynamic data;
+  final DateTime expiry;
+  _CacheEntry(this.data, Duration ttl) : expiry = DateTime.now().add(ttl);
+  bool get isExpired => DateTime.now().isAfter(expiry);
+}
+
 class CinemanaApiService {
   static const String baseUrl = 'https://cinemana.shabakaty.com/api/android/';
   
   static final http.Client _client = http.Client();
+  static final Map<String, _CacheEntry> _memoryCache = {};
+
+  static T? _getFromCache<T>(String key) {
+    final entry = _memoryCache[key];
+    if (entry != null) {
+      if (!entry.isExpired) {
+        return entry.data as T;
+      }
+      _memoryCache.remove(key);
+    }
+    return null;
+  }
+
+  static void _putInCache(String key, dynamic data, {Duration ttl = const Duration(minutes: 10)}) {
+    _memoryCache[key] = _CacheEntry(data, ttl);
+  }
+
+  // Clear memory cache if needed
+  static void clearCache() {
+    _memoryCache.clear();
+  }
 
   // Headers matching the Android CTV client
   static const Map<String, String> defaultHeaders = {
@@ -20,6 +48,10 @@ class CinemanaApiService {
 
   /// Fetch featured hero banners
   static Future<List<VideoItem>> getBanners({int level = 0}) async {
+    final cacheKey = 'banners_$level';
+    final cached = _getFromCache<List<VideoItem>>(cacheKey);
+    if (cached != null) return cached;
+
     try {
       final response = await _client.get(
         Uri.parse('${baseUrl}banner/level/$level'),
@@ -27,16 +59,20 @@ class CinemanaApiService {
       );
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((item) => VideoItem.fromJson(item)).toList();
+        final list = data.map((item) => VideoItem.fromJson(item)).toList();
+        _putInCache(cacheKey, list, ttl: const Duration(minutes: 15));
+        return list;
       }
-    } catch (e) {
-      // Return empty list on failure
-    }
+    } catch (_) {}
     return [];
   }
 
   /// Fetch curated home video groups (shelves)
   static Future<List<VideoGroup>> getVideoGroups({String lang = 'ar', int level = 0}) async {
+    final cacheKey = 'groups_${lang}_$level';
+    final cached = _getFromCache<List<VideoGroup>>(cacheKey);
+    if (cached != null) return cached;
+
     try {
       final response = await _client.get(
         Uri.parse('${baseUrl}videoGroups/lang/$lang/level/$level'),
@@ -46,17 +82,21 @@ class CinemanaApiService {
         final Map<String, dynamic> data = json.decode(response.body);
         if (data['groups'] is List) {
           final List<dynamic> groups = data['groups'];
-          return groups.map((g) => VideoGroup.fromJson(g)).where((g) => g.items.isNotEmpty).toList();
+          final list = groups.map((g) => VideoGroup.fromJson(g)).where((g) => g.items.isNotEmpty).toList();
+          _putInCache(cacheKey, list, ttl: const Duration(minutes: 15));
+          return list;
         }
       }
-    } catch (e) {
-      // Log or handle error
-    }
+    } catch (_) {}
     return [];
   }
 
   /// Fetch latest movies
   static Future<List<VideoItem>> getLatestMovies({int page = 0, int itemsPerPage = 24, int level = 0}) async {
+    final cacheKey = 'movies_${page}_${itemsPerPage}_$level';
+    final cached = _getFromCache<List<VideoItem>>(cacheKey);
+    if (cached != null) return cached;
+
     try {
       final response = await _client.get(
         Uri.parse('${baseUrl}latestMovies/level/$level/itemsPerPage/$itemsPerPage/page/$page/'),
@@ -64,16 +104,20 @@ class CinemanaApiService {
       );
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((item) => VideoItem.fromJson(item)).toList();
+        final list = data.map((item) => VideoItem.fromJson(item)).toList();
+        _putInCache(cacheKey, list, ttl: const Duration(minutes: 5));
+        return list;
       }
-    } catch (e) {
-      //
-    }
+    } catch (_) {}
     return [];
   }
 
   /// Fetch latest series
   static Future<List<VideoItem>> getLatestSeries({int page = 0, int itemsPerPage = 24, int level = 0}) async {
+    final cacheKey = 'series_${page}_${itemsPerPage}_$level';
+    final cached = _getFromCache<List<VideoItem>>(cacheKey);
+    if (cached != null) return cached;
+
     try {
       final response = await _client.get(
         Uri.parse('${baseUrl}latestSeries/level/$level/itemsPerPage/$itemsPerPage/page/$page/'),
@@ -81,16 +125,20 @@ class CinemanaApiService {
       );
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((item) => VideoItem.fromJson(item)).toList();
+        final list = data.map((item) => VideoItem.fromJson(item)).toList();
+        _putInCache(cacheKey, list, ttl: const Duration(minutes: 5));
+        return list;
       }
-    } catch (e) {
-      //
-    }
+    } catch (_) {}
     return [];
   }
 
   /// Fetch full video details
   static Future<VideoItem?> getVideoDetails(String id) async {
+    final cacheKey = 'details_$id';
+    final cached = _getFromCache<VideoItem>(cacheKey);
+    if (cached != null) return cached;
+
     try {
       final response = await _client.get(
         Uri.parse('${baseUrl}allVideoInfo/id/$id'),
@@ -98,16 +146,20 @@ class CinemanaApiService {
       );
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
-        return VideoItem.fromJson(data);
+        final item = VideoItem.fromJson(data);
+        _putInCache(cacheKey, item, ttl: const Duration(minutes: 20));
+        return item;
       }
-    } catch (e) {
-      //
-    }
+    } catch (_) {}
     return null;
   }
 
   /// Fetch playable streams and transcoded resolutions (2160p, 1080p, 720p, 480p, etc.)
   static Future<List<VideoStream>> getVideoStreams(String id) async {
+    final cacheKey = 'streams_$id';
+    final cached = _getFromCache<List<VideoStream>>(cacheKey);
+    if (cached != null) return cached;
+
     try {
       final response = await _client.get(
         Uri.parse('${baseUrl}transcoddedFiles/id/$id'),
@@ -119,17 +171,20 @@ class CinemanaApiService {
           final streams = decoded.map((s) => VideoStream.fromJson(s)).toList();
           // Sort descending by quality (4K -> 1080p -> 720p ...)
           streams.sort((a, b) => b.qualityRank.compareTo(a.qualityRank));
+          _putInCache(cacheKey, streams, ttl: const Duration(minutes: 15));
           return streams;
         }
       }
-    } catch (e) {
-      //
-    }
+    } catch (_) {}
     return [];
   }
 
   /// Fetch subtitle tracks (Arabic, English SRT and VTT files)
   static Future<List<CinemanaSubtitle>> getSubtitles(String id) async {
+    final cacheKey = 'subs_$id';
+    final cached = _getFromCache<List<CinemanaSubtitle>>(cacheKey);
+    if (cached != null) return cached;
+
     try {
       final response = await _client.get(
         Uri.parse('${baseUrl}translationFiles/id/$id'),
@@ -145,16 +200,19 @@ class CinemanaApiService {
             }
           }
         }
+        _putInCache(cacheKey, tracks, ttl: const Duration(minutes: 30));
         return tracks;
       }
-    } catch (e) {
-      //
-    }
+    } catch (_) {}
     return [];
   }
 
   /// Fetch seasons for a series
   static Future<List<int>> getSeasons(String id) async {
+    final cacheKey = 'seasons_$id';
+    final cached = _getFromCache<List<int>>(cacheKey);
+    if (cached != null) return cached;
+
     try {
       final response = await _client.get(
         Uri.parse('${baseUrl}videoSeasonNumber/id/$id'),
@@ -171,17 +229,21 @@ class CinemanaApiService {
             }
           }
           seasons.sort();
-          return seasons;
+          final result = seasons.isEmpty ? [1] : seasons;
+          _putInCache(cacheKey, result, ttl: const Duration(minutes: 30));
+          return result;
         }
       }
-    } catch (e) {
-      //
-    }
+    } catch (_) {}
     return [1];
   }
 
   /// Fetch episodes list for a series
   static Future<List<EpisodeItem>> getEpisodes(String id) async {
+    final cacheKey = 'episodes_$id';
+    final cached = _getFromCache<List<EpisodeItem>>(cacheKey);
+    if (cached != null) return cached;
+
     try {
       final response = await _client.get(
         Uri.parse('${baseUrl}videoSeason/id/$id'),
@@ -197,17 +259,20 @@ class CinemanaApiService {
             final epB = int.tryParse(b.episodeNumber) ?? 0;
             return epA.compareTo(epB);
           });
+          _putInCache(cacheKey, episodes, ttl: const Duration(minutes: 30));
           return episodes;
         }
       }
-    } catch (e) {
-      //
-    }
+    } catch (_) {}
     return [];
   }
 
   /// Fetch related videos
   static Future<List<VideoItem>> getRelatedVideos(String id, {bool isSeries = false, int level = 0}) async {
+    final cacheKey = 'related_${id}_${isSeries}_$level';
+    final cached = _getFromCache<List<VideoItem>>(cacheKey);
+    if (cached != null) return cached;
+
     try {
       final kind = isSeries ? '2' : '1';
       final response = await _client.get(
@@ -217,18 +282,22 @@ class CinemanaApiService {
       if (response.statusCode == 200) {
         final dynamic data = json.decode(response.body);
         if (data is List) {
-          return data.map((item) => VideoItem.fromJson(item)).toList();
+          final list = data.map((item) => VideoItem.fromJson(item)).toList();
+          _putInCache(cacheKey, list, ttl: const Duration(minutes: 20));
+          return list;
         }
       }
-    } catch (e) {
-      //
-    }
+    } catch (_) {}
     return [];
   }
 
   /// Search movies and TV shows
   static Future<List<VideoItem>> search(String query, {int level = 0}) async {
     if (query.trim().isEmpty) return [];
+    final cacheKey = 'search_${query.trim().toLowerCase()}_$level';
+    final cached = _getFromCache<List<VideoItem>>(cacheKey);
+    if (cached != null) return cached;
+
     try {
       final encoded = Uri.encodeComponent(query.trim());
       final response = await _client.get(
@@ -238,17 +307,21 @@ class CinemanaApiService {
       if (response.statusCode == 200) {
         final dynamic data = json.decode(response.body);
         if (data is List) {
-          return data.map((item) => VideoItem.fromJson(item)).toList();
+          final list = data.map((item) => VideoItem.fromJson(item)).toList();
+          _putInCache(cacheKey, list, ttl: const Duration(minutes: 10));
+          return list;
         }
       }
-    } catch (e) {
-      //
-    }
+    } catch (_) {}
     return [];
   }
 
   /// Fetch intro skipping intervals (if video has skippable intro)
   static Future<IntroInterval?> getIntroInterval(String id) async {
+    final cacheKey = 'intro_$id';
+    final cached = _getFromCache<IntroInterval>(cacheKey);
+    if (cached != null) return cached;
+
     try {
       final response = await _client.get(
         Uri.parse('${baseUrl}allVideoInfo/id/$id'),
@@ -261,7 +334,10 @@ class CinemanaApiService {
             data['introSkipping'],
             data['hasIntroSkipping'],
           );
-          if (interval != null) return interval;
+          if (interval != null) {
+            _putInCache(cacheKey, interval, ttl: const Duration(minutes: 45));
+            return interval;
+          }
 
           if (data['skippingDurations'] is Map) {
             final starts = data['skippingDurations']['start'];
@@ -270,7 +346,9 @@ class CinemanaApiService {
               final s = double.tryParse(starts[0]?.toString() ?? '');
               final e = double.tryParse(ends[0]?.toString() ?? '');
               if (s != null && e != null && e > s) {
-                return IntroInterval(start: s, end: e);
+                final result = IntroInterval(start: s, end: e);
+                _putInCache(cacheKey, result, ttl: const Duration(minutes: 45));
+                return result;
               }
             }
           }
@@ -292,7 +370,9 @@ class CinemanaApiService {
             final s = double.tryParse(starts[0]?.toString() ?? '');
             final e = double.tryParse(ends[0]?.toString() ?? '');
             if (s != null && e != null && e > s) {
-              return IntroInterval(start: s, end: e);
+              final result = IntroInterval(start: s, end: e);
+              _putInCache(cacheKey, result, ttl: const Duration(minutes: 45));
+              return result;
             }
           }
         }

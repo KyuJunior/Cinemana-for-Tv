@@ -334,6 +334,8 @@ class _TVSearchScreenState extends State<TVSearchScreen> {
                                   ),
                                 )
                               : GridView.builder(
+                                  cacheExtent: 800,
+                                  addRepaintBoundaries: true,
                                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: 4,
                                     childAspectRatio: 0.65,

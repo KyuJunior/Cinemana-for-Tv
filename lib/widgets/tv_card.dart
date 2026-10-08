@@ -24,64 +24,68 @@ class TVCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TVFocusable(
-      autoFocus: autoFocus,
-      onKeyLeft: onKeyLeft,
-      onPressed: onSelect,
-      scaleOnFocus: 1.08,
-      borderRadius: BorderRadius.circular(10),
-      builder: (context, isFocused) {
-        return Container(
-          width: width,
-          height: height,
-          decoration: BoxDecoration(
-            color: TVColors.card,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isFocused ? TVColors.focusBorder : Colors.transparent,
-              width: 2.5,
+    return RepaintBoundary(
+      child: TVFocusable(
+        autoFocus: autoFocus,
+        onKeyLeft: onKeyLeft,
+        onPressed: onSelect,
+        scaleOnFocus: 1.08,
+        borderRadius: BorderRadius.circular(10),
+        builder: (context, isFocused) {
+          return Container(
+            width: width,
+            height: height,
+            decoration: BoxDecoration(
+              color: TVColors.card,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isFocused ? TVColors.focusBorder : Colors.transparent,
+                width: 2.5,
+              ),
             ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Poster Image
-              if (video.posterUrl.isNotEmpty)
-                CachedNetworkImage(
-                  imageUrl: video.posterUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: TVColors.surface,
-                    child: const Center(
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: TVColors.accent,
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Poster Image with restricted memCache to eliminate memory footprint & jank
+                if (video.posterUrl.isNotEmpty)
+                  CachedNetworkImage(
+                    imageUrl: video.posterUrl,
+                    fit: BoxFit.cover,
+                    memCacheWidth: 290,
+                    memCacheHeight: 430,
+                    maxWidthDiskCache: 400,
+                    maxHeightDiskCache: 600,
+                    fadeInDuration: const Duration(milliseconds: 140),
+                    fadeOutDuration: const Duration(milliseconds: 80),
+                    placeholder: (context, url) => Container(
+                      color: TVColors.surface,
+                      child: const Center(
+                        child: Icon(
+                          Icons.movie_outlined,
+                          color: TVColors.textMuted,
+                          size: 30,
                         ),
                       ),
                     ),
-                  ),
-                  errorWidget: (context, url, error) => Container(
+                    errorWidget: (context, url, error) => Container(
+                      color: TVColors.surface,
+                      child: const Icon(
+                        Icons.movie_outlined,
+                        color: TVColors.textMuted,
+                        size: 36,
+                      ),
+                    ),
+                  )
+                else
+                  Container(
                     color: TVColors.surface,
                     child: const Icon(
                       Icons.movie_outlined,
                       color: TVColors.textMuted,
-                      size: 40,
+                      size: 36,
                     ),
                   ),
-                )
-              else
-                Container(
-                  color: TVColors.surface,
-                  child: const Icon(
-                    Icons.movie_outlined,
-                    color: TVColors.textMuted,
-                    size: 40,
-                  ),
-                ),
 
               // Gradient vignette at bottom
               Positioned.fill(
@@ -195,6 +199,8 @@ class TVCard extends StatelessWidget {
           ),
         );
       },
-    );
-  }
+    ),
+  );
 }
+}
+

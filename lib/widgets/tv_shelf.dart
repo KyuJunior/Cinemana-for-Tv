@@ -68,6 +68,7 @@ class TVShelf extends StatelessWidget {
             height: 230,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
+              cacheExtent: 600,
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 6),
               itemCount: items.length,
               separatorBuilder: (context, index) => const SizedBox(width: 16),
