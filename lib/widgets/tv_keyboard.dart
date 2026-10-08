@@ -8,6 +8,8 @@ class TVKeyboard extends StatefulWidget {
   final VoidCallback onClear;
   final VoidCallback onSearch;
   final VoidCallback? onNavigateLeft;
+  final VoidCallback? onNavigateRight;
+  final FocusNode? firstKeyFocusNode;
 
   const TVKeyboard({
     super.key,
@@ -16,6 +18,8 @@ class TVKeyboard extends StatefulWidget {
     required this.onClear,
     required this.onSearch,
     this.onNavigateLeft,
+    this.onNavigateRight,
+    this.firstKeyFocusNode,
   });
 
   @override
@@ -47,20 +51,23 @@ class _TVKeyboardState extends State<TVKeyboard> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var row in currentKeys)
+        for (int r = 0; r < currentKeys.length; r++)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                for (int i = 0; i < row.length; i++)
+                for (int i = 0; i < currentKeys[r].length; i++)
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: _buildKey(
-                      label: row[i],
+                      label: currentKeys[r][i],
                       width: 44,
+                      focusNode: (r == 0 && i == 0) ? widget.firstKeyFocusNode : null,
+                      autoFocus: (r == 0 && i == 0),
                       onKeyLeft: i == 0 ? widget.onNavigateLeft : null,
-                      onPressed: () => widget.onKeyPress(_isArabic ? row[i] : row[i].toLowerCase()),
+                      onKeyRight: i == currentKeys[r].length - 1 ? widget.onNavigateRight : null,
+                      onPressed: () => widget.onKeyPress(_isArabic ? currentKeys[r][i] : currentKeys[r][i].toLowerCase()),
                     ),
                   ),
               ],
@@ -105,6 +112,7 @@ class _TVKeyboardState extends State<TVKeyboard> {
               width: 90,
               icon: Icons.search_rounded,
               isPrimary: true,
+              onKeyRight: widget.onNavigateRight,
               onPressed: widget.onSearch,
             ),
           ],
@@ -118,13 +126,19 @@ class _TVKeyboardState extends State<TVKeyboard> {
     required double width,
     IconData? icon,
     bool isPrimary = false,
+    FocusNode? focusNode,
+    bool autoFocus = false,
     VoidCallback? onKeyLeft,
+    VoidCallback? onKeyRight,
     required VoidCallback onPressed,
   }) {
     return TVFocusable(
+      focusNode: focusNode,
+      autoFocus: autoFocus,
       scaleOnFocus: 1.12,
       borderRadius: BorderRadius.circular(8),
       onKeyLeft: onKeyLeft,
+      onKeyRight: onKeyRight,
       onPressed: onPressed,
       builder: (context, isFocused) {
         return Container(

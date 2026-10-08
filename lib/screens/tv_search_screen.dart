@@ -29,19 +29,37 @@ class _TVSearchScreenState extends State<TVSearchScreen> {
   Timer? _debounceTimer;
   int _searchSessionId = 0;
 
-  final FocusNode _screenFocusNode = FocusNode();
+  final FocusNode _firstKeyFocusNode = FocusNode(debugLabel: 'Search_FirstKey');
+  final FocusNode _gridFirstItemFocusNode = FocusNode(debugLabel: 'Search_GridFirst');
 
   @override
   void initState() {
     super.initState();
     _loadInitialSuggestions();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _firstKeyFocusNode.requestFocus();
+      }
+    });
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
-    _screenFocusNode.dispose();
+    _firstKeyFocusNode.dispose();
+    _gridFirstItemFocusNode.dispose();
     super.dispose();
+  }
+
+  void _navigateToGrid() {
+    final activeList = _query.trim().isEmpty ? _suggestions : _results;
+    if (activeList.isNotEmpty) {
+      _gridFirstItemFocusNode.requestFocus();
+    }
+  }
+
+  void _navigateToKeyboard() {
+    _firstKeyFocusNode.requestFocus();
   }
 
   Future<void> _loadInitialSuggestions() async {
@@ -183,7 +201,8 @@ class _TVSearchScreenState extends State<TVSearchScreen> {
     final isShowingSuggestions = _query.trim().isEmpty;
 
     return Focus(
-      focusNode: _screenFocusNode,
+      canRequestFocus: false,
+      skipTraversal: true,
       onKeyEvent: _handleKeyInput,
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -254,11 +273,13 @@ class _TVSearchScreenState extends State<TVSearchScreen> {
 
                     // Virtual TV Remote Keyboard
                     TVKeyboard(
+                      firstKeyFocusNode: _firstKeyFocusNode,
                       onKeyPress: _onKeyPress,
                       onBackspace: _onBackspace,
                       onClear: _onClear,
                       onSearch: _triggerSearchNow,
                       onNavigateLeft: widget.onNavigateLeft,
+                      onNavigateRight: _navigateToGrid,
                     ),
                   ],
                 ),
@@ -345,8 +366,11 @@ class _TVSearchScreenState extends State<TVSearchScreen> {
                                   itemCount: activeList.length,
                                   itemBuilder: (context, index) {
                                     final video = activeList[index];
+                                    final isColZero = index % 4 == 0;
                                     return TVCard(
                                       video: video,
+                                      focusNode: index == 0 ? _gridFirstItemFocusNode : null,
+                                      onKeyLeft: isColZero ? _navigateToKeyboard : null,
                                       onSelect: () {
                                         Navigator.of(context).push(
                                           MaterialPageRoute(

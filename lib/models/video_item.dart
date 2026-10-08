@@ -60,14 +60,20 @@ class VideoItem {
   }
 
   String get posterUrl {
-    if (imgMediumThumbObjUrl != null && imgMediumThumbObjUrl!.startsWith('http')) {
-      return imgMediumThumbObjUrl!;
+    bool isValidUrl(String? u) =>
+        u != null &&
+        u.startsWith('http') &&
+        !u.contains('loading.gif') &&
+        !u.contains('loadingImages');
+
+    if (isValidUrl(imgMediumThumbObjUrl)) return imgMediumThumbObjUrl!;
+    if (isValidUrl(imgObjUrl)) return imgObjUrl!;
+    if (isValidUrl(imgThumbObjUrl)) return imgThumbObjUrl!;
+    if (imgMediumThumb.isNotEmpty) {
+      return 'https://cnth2.shabakaty.com/vascin-poster-images/$imgMediumThumb';
     }
-    if (imgObjUrl != null && imgObjUrl!.startsWith('http')) {
-      return imgObjUrl!;
-    }
-    if (imgThumbObjUrl != null && imgThumbObjUrl!.startsWith('http')) {
-      return imgThumbObjUrl!;
+    if (imgThumb.isNotEmpty) {
+      return 'https://cnth2.shabakaty.com/vascin-poster-images/$imgThumb';
     }
     if (img.isNotEmpty) {
       return 'https://cnth2.shabakaty.com/vascin-poster-images/$img';
@@ -76,9 +82,13 @@ class VideoItem {
   }
 
   String get backdropUrl {
-    if (imgObjUrl != null && imgObjUrl!.startsWith('http')) {
-      return imgObjUrl!;
-    }
+    bool isValidUrl(String? u) =>
+        u != null &&
+        u.startsWith('http') &&
+        !u.contains('loading.gif') &&
+        !u.contains('loadingImages');
+
+    if (isValidUrl(imgObjUrl)) return imgObjUrl!;
     return posterUrl;
   }
 

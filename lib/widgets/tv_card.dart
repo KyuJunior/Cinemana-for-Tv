@@ -8,6 +8,7 @@ class TVCard extends StatelessWidget {
   final VideoItem video;
   final VoidCallback onSelect;
   final VoidCallback? onKeyLeft;
+  final FocusNode? focusNode;
   final double width;
   final double height;
   final bool autoFocus;
@@ -17,6 +18,7 @@ class TVCard extends StatelessWidget {
     required this.video,
     required this.onSelect,
     this.onKeyLeft,
+    this.focusNode,
     this.width = 145,
     this.height = 215,
     this.autoFocus = false,
@@ -26,6 +28,7 @@ class TVCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: TVFocusable(
+        focusNode: focusNode,
         autoFocus: autoFocus,
         onKeyLeft: onKeyLeft,
         onPressed: onSelect,
