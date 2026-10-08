@@ -5,6 +5,7 @@ import '../models/video_group.dart';
 import '../models/video_stream.dart';
 import '../models/subtitle_track.dart';
 import '../models/episode_item.dart';
+import '../models/intro_interval.dart';
 
 class CinemanaApiService {
   static const String baseUrl = 'https://cinemana.shabakaty.com/api/android/';
@@ -244,5 +245,60 @@ class CinemanaApiService {
       //
     }
     return [];
+  }
+
+  /// Fetch intro skipping intervals (if video has skippable intro)
+  static Future<IntroInterval?> getIntroInterval(String id) async {
+    try {
+      final response = await _client.get(
+        Uri.parse('${baseUrl}allVideoInfo/id/$id'),
+        headers: defaultHeaders,
+      );
+      if (response.statusCode == 200) {
+        final dynamic data = json.decode(response.body);
+        if (data is Map<String, dynamic>) {
+          final interval = IntroInterval.fromJson(
+            data['introSkipping'],
+            data['hasIntroSkipping'],
+          );
+          if (interval != null) return interval;
+
+          if (data['skippingDurations'] is Map) {
+            final starts = data['skippingDurations']['start'];
+            final ends = data['skippingDurations']['end'];
+            if (starts is List && ends is List && starts.isNotEmpty && ends.isNotEmpty) {
+              final s = double.tryParse(starts[0]?.toString() ?? '');
+              final e = double.tryParse(ends[0]?.toString() ?? '');
+              if (s != null && e != null && e > s) {
+                return IntroInterval(start: s, end: e);
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    try {
+      final response = await _client.get(
+        Uri.parse('${baseUrl}skippingDurations/id/$id'),
+        headers: defaultHeaders,
+      );
+      if (response.statusCode == 200) {
+        final dynamic data = json.decode(response.body);
+        if (data is Map<String, dynamic>) {
+          final starts = data['start'];
+          final ends = data['end'];
+          if (starts is List && ends is List && starts.isNotEmpty && ends.isNotEmpty) {
+            final s = double.tryParse(starts[0]?.toString() ?? '');
+            final e = double.tryParse(ends[0]?.toString() ?? '');
+            if (s != null && e != null && e > s) {
+              return IntroInterval(start: s, end: e);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    return null;
   }
 }

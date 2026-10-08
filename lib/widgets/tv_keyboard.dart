@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/tv_theme.dart';
 import 'tv_focusable.dart';
 
-class TVKeyboard extends StatelessWidget {
+class TVKeyboard extends StatefulWidget {
   final ValueChanged<String> onKeyPress;
   final VoidCallback onBackspace;
   final VoidCallback onClear;
@@ -18,20 +18,36 @@ class TVKeyboard extends StatelessWidget {
     this.onNavigateLeft,
   });
 
-  static const List<List<String>> _keys = [
+  @override
+  State<TVKeyboard> createState() => _TVKeyboardState();
+}
+
+class _TVKeyboardState extends State<TVKeyboard> {
+  bool _isArabic = false;
+
+  static const List<List<String>> _enKeys = [
     ['A', 'B', 'C', 'D', 'E', 'F', '1', '2', '3'],
     ['G', 'H', 'I', 'J', 'K', 'L', '4', '5', '6'],
     ['M', 'N', 'O', 'P', 'Q', 'R', '7', '8', '9'],
     ['S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0'],
   ];
 
+  static const List<List<String>> _arKeys = [
+    ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ'],
+    ['ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع'],
+    ['غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و'],
+    ['ي', 'ى', 'ة', 'ء', 'ئ', 'ؤ', '1', '2', '3'],
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final currentKeys = _isArabic ? _arKeys : _enKeys;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var row in _keys)
+        for (var row in currentKeys)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Row(
@@ -43,46 +59,53 @@ class TVKeyboard extends StatelessWidget {
                     child: _buildKey(
                       label: row[i],
                       width: 44,
-                      onKeyLeft: i == 0 ? onNavigateLeft : null,
-                      onPressed: () => onKeyPress(row[i].toLowerCase()),
+                      onKeyLeft: i == 0 ? widget.onNavigateLeft : null,
+                      onPressed: () => widget.onKeyPress(_isArabic ? row[i] : row[i].toLowerCase()),
                     ),
                   ),
               ],
             ),
           ),
         const SizedBox(height: 4),
-        // Action row: SPACE, BACKSPACE, CLEAR, SEARCH
+        // Action row: LANG (AR/EN), SPACE, DELETE, CLEAR, SEARCH
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildKey(
+              label: _isArabic ? 'EN' : 'عربي',
+              width: 56,
+              icon: Icons.language_rounded,
+              onKeyLeft: widget.onNavigateLeft,
+              onPressed: () => setState(() => _isArabic = !_isArabic),
+            ),
+            const SizedBox(width: 6),
+            _buildKey(
               label: 'SPACE',
-              width: 148,
+              width: 114,
               icon: Icons.space_bar_rounded,
-              onKeyLeft: onNavigateLeft,
-              onPressed: () => onKeyPress(' '),
+              onPressed: () => widget.onKeyPress(' '),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             _buildKey(
-              label: 'DELETE',
-              width: 96,
+              label: 'DEL',
+              width: 88,
               icon: Icons.backspace_outlined,
-              onPressed: onBackspace,
+              onPressed: widget.onBackspace,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             _buildKey(
-              label: 'CLEAR',
-              width: 96,
+              label: 'CLR',
+              width: 88,
               icon: Icons.clear_all_rounded,
-              onPressed: onClear,
+              onPressed: widget.onClear,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             _buildKey(
               label: 'SEARCH',
-              width: 96,
+              width: 90,
               icon: Icons.search_rounded,
               isPrimary: true,
-              onPressed: onSearch,
+              onPressed: widget.onSearch,
             ),
           ],
         ),
@@ -131,7 +154,7 @@ class TVKeyboard extends StatelessWidget {
                             ? (isPrimary ? Colors.black : Colors.white)
                             : (isPrimary ? Colors.black : TVColors.textSecondary),
                       ),
-                      if (label.length > 2) ...[
+                      if (label.isNotEmpty) ...[
                         const SizedBox(width: 4),
                         Text(
                           label,

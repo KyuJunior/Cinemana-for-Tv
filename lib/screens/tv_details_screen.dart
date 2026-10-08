@@ -24,7 +24,6 @@ class TVDetailsScreen extends StatefulWidget {
 
 class _TVDetailsScreenState extends State<TVDetailsScreen> {
   VideoItem? _fullDetails;
-  bool _isLoading = true;
 
   List<int> _seasons = [];
   int _selectedSeason = 1;
@@ -66,14 +65,12 @@ class _TVDetailsScreenState extends State<TVDetailsScreen> {
           _allEpisodes = episodes;
           _selectedSeason = _seasons.first;
           _updateFilteredEpisodes();
-          _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _fullDetails = widget.video;
-          _isLoading = false;
         });
       }
     }

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../models/video_item.dart';
 import '../models/video_stream.dart';
 import '../models/subtitle_track.dart';
+import '../models/intro_interval.dart';
 import '../services/cinemana_api_service.dart';
 import '../services/storage_service.dart';
 import '../theme/tv_theme.dart';
@@ -24,7 +25,7 @@ class TVPlayerScreen extends StatefulWidget {
   State<TVPlayerScreen> createState() => _TVPlayerScreenState();
 }
 
-class _TVPlayerScreenState extends State<TVPlayerScreen> {
+class _TVPlayerScreenState extends State<TVPlayerScreen> with WidgetsBindingObserver {
   late final Player _player;
   late final VideoController _controller;
 
@@ -37,6 +38,9 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> {
   List<CinemanaSubtitle> _availableSubtitles = [];
   CinemanaSubtitle? _currentSubtitle;
 
+  IntroInterval? _introInterval;
+  bool _showSkipIntro = false;
+
   bool _showOsd = true;
   Timer? _osdTimer;
   Timer? _progressSaveTimer;
@@ -44,18 +48,30 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> {
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
+  bool _isExiting = false;
 
   final FocusNode _playPauseFocus = FocusNode();
+  final FocusNode _seekbarFocus = FocusNode();
+  final FocusNode _backButtonFocus = FocusNode();
   final FocusScopeNode _playerScopeNode = FocusScopeNode();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     _player = Player();
     _controller = VideoController(_player);
 
     _player.stream.position.listen((pos) {
-      if (mounted) setState(() => _position = pos);
+      if (mounted) {
+        final curSec = pos.inMilliseconds / 1000.0;
+        final inIntro = _introInterval != null && _introInterval!.contains(curSec);
+        setState(() {
+          _position = pos;
+          _showSkipIntro = inIntro;
+        });
+      }
     });
 
     _player.stream.duration.listen((dur) {
@@ -76,14 +92,44 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _player.pause();
+      _saveProgress();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _saveProgress();
     _osdTimer?.cancel();
     _progressSaveTimer?.cancel();
     _playPauseFocus.dispose();
+    _seekbarFocus.dispose();
+    _backButtonFocus.dispose();
     _playerScopeNode.dispose();
-    _player.dispose();
+    try {
+      _player.pause();
+      _player.stop();
+      _player.dispose();
+    } catch (_) {}
     super.dispose();
+  }
+
+  Future<void> _exitPlayer() async {
+    if (_isExiting) return;
+    _isExiting = true;
+    _saveProgress();
+    _osdTimer?.cancel();
+    _progressSaveTimer?.cancel();
+    try {
+      await _player.pause();
+      await _player.stop();
+    } catch (_) {}
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _initPlayer() async {
@@ -99,9 +145,11 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> {
     try {
       final streamsFuture = CinemanaApiService.getVideoStreams(widget.video.id);
       final subsFuture = CinemanaApiService.getSubtitles(widget.video.id);
+      final introFuture = CinemanaApiService.getIntroInterval(widget.video.id);
 
       final streams = await streamsFuture;
       final subs = await subsFuture;
+      final intro = await introFuture;
 
       if (!mounted) return;
 
@@ -115,6 +163,7 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> {
 
       _availableStreams = streams;
       _availableSubtitles = subs;
+      _introInterval = intro;
 
       // Select initial stream based on user preference or highest quality
       VideoStream chosen = streams.first;
@@ -199,6 +248,14 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> {
       seconds: newPos.inSeconds.clamp(0, _duration.inSeconds),
     );
     _player.seek(clamped);
+  }
+
+  void _skipIntro() {
+    if (_introInterval != null) {
+      _resetOsdTimer();
+      _player.seek(Duration(milliseconds: (_introInterval!.end * 1000).toInt()));
+      setState(() => _showSkipIntro = false);
+    }
   }
 
   void _togglePlayPause() {
@@ -314,286 +371,474 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> {
   }
 
   KeyEventResult _handleGlobalKey(KeyEvent event) {
-    if (event is KeyDownEvent) {
-      _resetOsdTimer();
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
-      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-        _seekBy(-10);
-        return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-        _seekBy(10);
-        return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.mediaPlayPause ||
-          event.logicalKey == LogicalKeyboardKey.space) {
-        _togglePlayPause();
-        return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.escape ||
+    // When OSD is hidden:
+    if (!_showOsd) {
+      if (event.logicalKey == LogicalKeyboardKey.escape ||
           event.logicalKey == LogicalKeyboardKey.backspace) {
-        Navigator.of(context).pop();
+        _exitPlayer();
         return KeyEventResult.handled;
       }
+      // Any other remote key reveals OSD and focuses Play/Pause
+      _resetOsdTimer();
+      _playPauseFocus.requestFocus();
+      return KeyEventResult.handled;
     }
+
+    // Keep OSD awake on remote activity
+    _resetOsdTimer();
+
+    // Dedicated remote media keys
+    if (event.logicalKey == LogicalKeyboardKey.mediaPlayPause ||
+        event.logicalKey == LogicalKeyboardKey.space) {
+      _togglePlayPause();
+      return KeyEventResult.handled;
+    } else if (event.logicalKey == LogicalKeyboardKey.mediaFastForward) {
+      _seekBy(10);
+      return KeyEventResult.handled;
+    } else if (event.logicalKey == LogicalKeyboardKey.mediaRewind) {
+      _seekBy(-10);
+      return KeyEventResult.handled;
+    } else if (event.logicalKey == LogicalKeyboardKey.escape ||
+        event.logicalKey == LogicalKeyboardKey.backspace) {
+      _exitPlayer();
+      return KeyEventResult.handled;
+    }
+
+    // Left, Right, Up, Down, Select are handled by the currently focused widget
     return KeyEventResult.ignored;
+  }
+
+  Widget _buildSeekBar() {
+    final double progress = _duration.inMilliseconds > 0
+        ? (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0)
+        : 0.0;
+
+    return TVFocusable(
+      focusNode: _seekbarFocus,
+      scaleOnFocus: 1.0,
+      showGlow: false,
+      onKeyLeft: () => _seekBy(-10),
+      onKeyRight: () => _seekBy(10),
+      onPressed: _togglePlayPause,
+      builder: (context, isFocused) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isFocused)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: TVColors.accent,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: TVColors.accent.withOpacity(0.6),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.arrow_left_rounded, size: 18, color: Colors.black),
+                        Text(
+                          '◄ -10s   ${_formatDuration(_position)} / ${_formatDuration(_duration)}   +10s ►',
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Icon(Icons.arrow_right_rounded, size: 18, color: Colors.black),
+                      ],
+                    ),
+                  ),
+                ),
+              Row(
+                children: [
+                  Text(
+                    _formatDuration(_position),
+                    style: TextStyle(
+                      color: isFocused ? TVColors.accent : Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final width = constraints.maxWidth;
+                        final fillWidth = (progress * width).clamp(0.0, width);
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.centerLeft,
+                          children: [
+                            Container(
+                              width: width,
+                              height: isFocused ? 8 : 5,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            Container(
+                              width: fillWidth,
+                              height: isFocused ? 8 : 5,
+                              decoration: BoxDecoration(
+                                color: TVColors.accent,
+                                borderRadius: BorderRadius.circular(4),
+                                boxShadow: isFocused
+                                    ? [
+                                        BoxShadow(
+                                          color: TVColors.accent.withOpacity(0.9),
+                                          blurRadius: 10,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                            ),
+                            if (isFocused)
+                              Positioned(
+                                left: (fillWidth - 8).clamp(0.0, width - 16),
+                                child: Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: TVColors.accent, width: 2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: TVColors.accent.withOpacity(0.9),
+                                        blurRadius: 10,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Text(
+                    _formatDuration(_duration),
+                    style: const TextStyle(color: TVColors.textSecondary, fontSize: 13),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return FocusScope(
-      node: _playerScopeNode,
-      onKeyEvent: (node, event) => _handleGlobalKey(event),
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: GestureDetector(
-          onTap: _resetOsdTimer,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // MediaKit Video Surface
-              Center(
-                child: Video(
-                  controller: _controller,
-                  controls: NoVideoControls,
-                ),
-              ),
-
-              // Loading Spinner
-              if (_isLoading)
-                Container(
-                  color: Colors.black.withOpacity(0.7),
-                  child: const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 44,
-                          height: 44,
-                          child: CircularProgressIndicator(color: TVColors.accent),
-                        ),
-                        SizedBox(height: 16),
-                        Text('Buffering Stream...', style: TextStyle(color: Colors.white, fontSize: 15)),
-                      ],
-                    ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _exitPlayer();
+      },
+      child: FocusScope(
+        node: _playerScopeNode,
+        onKeyEvent: (node, event) => _handleGlobalKey(event),
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: GestureDetector(
+            onTap: _resetOsdTimer,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // MediaKit Video Surface
+                Center(
+                  child: Video(
+                    controller: _controller,
+                    controls: NoVideoControls,
                   ),
                 ),
 
-              // Error banner
-              if (_errorMessage != null)
-                Container(
-                  color: Colors.black.withOpacity(0.85),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.error_outline_rounded, color: TVColors.crimson, size: 50),
-                        const SizedBox(height: 14),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 40),
-                          child: Text(
-                            _errorMessage!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white, fontSize: 16),
+                // Loading Spinner
+                if (_isLoading)
+                  Container(
+                    color: Colors.black.withOpacity(0.7),
+                    child: const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: CircularProgressIndicator(color: TVColors.accent),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: ElevatedButton.styleFrom(backgroundColor: TVColors.accent),
-                          child: const Text('Go Back', style: TextStyle(color: Colors.black)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              // On Screen Display (OSD) Overlay
-              AnimatedOpacity(
-                opacity: _showOsd ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: IgnorePointer(
-                  ignoring: !_showOsd,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.85),
-                          Colors.transparent,
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.92),
+                          SizedBox(height: 16),
+                          Text('Buffering Stream...', style: TextStyle(color: Colors.white, fontSize: 15)),
                         ],
-                        stops: const [0.0, 0.25, 0.65, 1.0],
                       ),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 30),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Top Header (Back, Title, Stream badge)
-                        Row(
-                          children: [
-                            TVFocusable(
-                              scaleOnFocus: 1.1,
-                              borderRadius: BorderRadius.circular(8),
-                              onPressed: () => Navigator.of(context).pop(),
-                              builder: (context, isFocused) {
-                                return Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: isFocused ? TVColors.cardFocused : Colors.white.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: isFocused ? TVColors.focusBorder : Colors.transparent,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
-                                );
-                              },
+                  ),
+
+                // Error banner
+                if (_errorMessage != null)
+                  Container(
+                    color: Colors.black.withOpacity(0.85),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: TVColors.crimson, size: 50),
+                          const SizedBox(height: 14),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 40),
+                            child: Text(
+                              _errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white, fontSize: 16),
                             ),
-                            const SizedBox(width: 18),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    widget.video.primaryTitle,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  if (widget.video.secondaryTitle.isNotEmpty)
-                                    Text(
-                                      widget.video.secondaryTitle,
-                                      style: const TextStyle(
-                                        color: TVColors.textSecondary,
-                                        fontSize: 13,
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: _exitPlayer,
+                            style: ElevatedButton.styleFrom(backgroundColor: TVColors.accent),
+                            child: const Text('Go Back', style: TextStyle(color: Colors.black)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // Floating Skip Intro button when OSD is hidden
+                if (!_showOsd && _showSkipIntro && _introInterval != null)
+                  Positioned(
+                    bottom: 40,
+                    right: 50,
+                    child: TVFocusable(
+                      scaleOnFocus: 1.1,
+                      borderRadius: BorderRadius.circular(10),
+                      onPressed: _skipIntro,
+                      builder: (context, isFocused) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isFocused ? Colors.white : Colors.black.withOpacity(0.85),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isFocused ? TVColors.focusBorder : TVColors.accent,
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: TVColors.accent.withOpacity(0.4),
+                                blurRadius: 12,
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.skip_next_rounded,
+                                color: isFocused ? Colors.black : TVColors.accent,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Skip Intro',
+                                style: TextStyle(
+                                  color: isFocused ? Colors.black : Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                // On Screen Display (OSD) Overlay
+                AnimatedOpacity(
+                  opacity: _showOsd ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: IgnorePointer(
+                    ignoring: !_showOsd,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.85),
+                            Colors.transparent,
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.92),
+                          ],
+                          stops: const [0.0, 0.25, 0.65, 1.0],
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 30),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Top Header (Back, Title, Stream badge)
+                          Row(
+                            children: [
+                              TVFocusable(
+                                focusNode: _backButtonFocus,
+                                scaleOnFocus: 1.1,
+                                borderRadius: BorderRadius.circular(8),
+                                onPressed: _exitPlayer,
+                                builder: (context, isFocused) {
+                                  return Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: isFocused ? TVColors.cardFocused : Colors.white.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: isFocused ? TVColors.focusBorder : Colors.transparent,
+                                        width: 1.5,
                                       ),
                                     ),
-                                ],
+                                    child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
+                                  );
+                                },
                               ),
-                            ),
-                            if (_currentStream != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: TVColors.accent.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: TVColors.accent.withOpacity(0.6)),
+                              const SizedBox(width: 18),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.video.primaryTitle,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (widget.video.secondaryTitle.isNotEmpty)
+                                      Text(
+                                        widget.video.secondaryTitle,
+                                        style: const TextStyle(
+                                          color: TVColors.textSecondary,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                  ],
                                 ),
-                                child: Text(
-                                  _currentStream!.resolution.toUpperCase(),
-                                  style: const TextStyle(
-                                    color: TVColors.accent,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
+                              ),
+                              if (_currentStream != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: TVColors.accent.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: TVColors.accent.withOpacity(0.6)),
                                   ),
-                                ),
-                              ),
-                          ],
-                        ),
-
-                        // Bottom Controls
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Progress Slider & Timestamps
-                            Row(
-                              children: [
-                                Text(
-                                  _formatDuration(_position),
-                                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: LinearProgressIndicator(
-                                      value: _duration.inMilliseconds > 0
-                                          ? (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0)
-                                          : 0.0,
-                                      backgroundColor: Colors.white.withOpacity(0.2),
-                                      valueColor: const AlwaysStoppedAnimation<Color>(TVColors.accent),
-                                      minHeight: 6,
+                                  child: Text(
+                                    _currentStream!.resolution.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: TVColors.accent,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  _formatDuration(_duration),
-                                  style: const TextStyle(color: TVColors.textSecondary, fontSize: 13),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 18),
+                            ],
+                          ),
 
-                            // Control buttons row (Rewind, Play/Pause, Fast Forward, Quality, Subtitle, Skip Intro)
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Rewind -10s
-                                _buildPlayerButton(
-                                  icon: Icons.replay_10_rounded,
-                                  label: '-10s',
-                                  onPressed: () => _seekBy(-10),
-                                ),
-                                const SizedBox(width: 16),
+                          // Bottom Controls (Seekbar + Control Buttons)
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Focusable Seekbar
+                              _buildSeekBar(),
+                              const SizedBox(height: 12),
 
-                                // Play / Pause
-                                _buildPlayerButton(
-                                  focusNode: _playPauseFocus,
-                                  icon: _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                  label: _isPlaying ? 'Pause' : 'Play',
-                                  isProminent: true,
-                                  onPressed: _togglePlayPause,
-                                ),
-                                const SizedBox(width: 16),
-
-                                // Forward +10s
-                                _buildPlayerButton(
-                                  icon: Icons.forward_10_rounded,
-                                  label: '+10s',
-                                  onPressed: () => _seekBy(10),
-                                ),
-                                const SizedBox(width: 24),
-
-                                // Quality Selector
-                                if (_availableStreams.isNotEmpty)
+                              // Control buttons row:
+                              // Left / Right naturally moves focus between these buttons!
+                              // Up moves focus to the Seekbar!
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Rewind -10s
                                   _buildPlayerButton(
-                                    icon: Icons.high_quality_rounded,
-                                    label: _currentStream?.resolution ?? 'Quality',
-                                    onPressed: _showQualityPicker,
+                                    icon: Icons.replay_10_rounded,
+                                    label: '-10s',
+                                    onPressed: () => _seekBy(-10),
                                   ),
-                                const SizedBox(width: 16),
+                                  const SizedBox(width: 16),
 
-                                // Subtitle Selector
-                                _buildPlayerButton(
-                                  icon: Icons.subtitles_rounded,
-                                  label: _currentSubtitle != null ? _currentSubtitle!.type.toUpperCase() : 'CC',
-                                  onPressed: _showSubtitlePicker,
-                                ),
-                                const SizedBox(width: 16),
+                                  // Play / Pause
+                                  _buildPlayerButton(
+                                    focusNode: _playPauseFocus,
+                                    icon: _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                    label: _isPlaying ? 'Pause' : 'Play',
+                                    isProminent: true,
+                                    onPressed: _togglePlayPause,
+                                  ),
+                                  const SizedBox(width: 16),
 
-                                // Skip Intro (+85s)
-                                _buildPlayerButton(
-                                  icon: Icons.skip_next_rounded,
-                                  label: 'Skip Intro',
-                                  onPressed: () => _seekBy(85),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
+                                  // Forward +10s
+                                  _buildPlayerButton(
+                                    icon: Icons.forward_10_rounded,
+                                    label: '+10s',
+                                    onPressed: () => _seekBy(10),
+                                  ),
+                                  const SizedBox(width: 24),
+
+                                  // Quality Selector
+                                  if (_availableStreams.isNotEmpty) ...[
+                                    _buildPlayerButton(
+                                      icon: Icons.high_quality_rounded,
+                                      label: _currentStream?.resolution ?? 'Quality',
+                                      onPressed: _showQualityPicker,
+                                    ),
+                                    const SizedBox(width: 16),
+                                  ],
+
+                                  // Subtitle Selector
+                                  _buildPlayerButton(
+                                    icon: Icons.subtitles_rounded,
+                                    label: _currentSubtitle != null ? _currentSubtitle!.type.toUpperCase() : 'CC',
+                                    onPressed: _showSubtitlePicker,
+                                  ),
+
+                                  // Skip Intro (Only visible if video has skippable intro AND in intro interval)
+                                  if (_showSkipIntro && _introInterval != null) ...[
+                                    const SizedBox(width: 16),
+                                    _buildPlayerButton(
+                                      icon: Icons.skip_next_rounded,
+                                      label: 'Skip Intro',
+                                      isProminent: true,
+                                      onPressed: _skipIntro,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
