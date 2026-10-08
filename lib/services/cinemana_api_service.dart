@@ -291,27 +291,57 @@ class CinemanaApiService {
     return [];
   }
 
-  /// Search movies and TV shows
-  static Future<List<VideoItem>> search(String query, {int level = 0}) async {
-    if (query.trim().isEmpty) return [];
-    final cacheKey = 'search_${query.trim().toLowerCase()}_$level';
+  /// Search movies and TV shows using Cinemana's official AdvancedSearch engine
+  static Future<List<VideoItem>> search(String query, {int level = 0, int pages = 2}) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return [];
+
+    final cacheKey = 'search_${trimmed.toLowerCase()}_${level}_p$pages';
     final cached = _getFromCache<List<VideoItem>>(cacheKey);
     if (cached != null) return cached;
 
     try {
-      final encoded = Uri.encodeComponent(query.trim());
-      final response = await _client.get(
-        Uri.parse('${baseUrl}video/V/2/itemsPerPage/30/video_title_search/$encoded/itemsPerPage/30/pageNumber/0/level/$level'),
-        headers: defaultHeaders,
-      );
-      if (response.statusCode == 200) {
-        final dynamic data = json.decode(response.body);
-        if (data is List) {
-          final list = data.map((item) => VideoItem.fromJson(item)).toList();
-          _putInCache(cacheKey, list, ttl: const Duration(minutes: 10));
-          return list;
+      final encoded = Uri.encodeComponent(trimmed);
+      final futures = List.generate(pages, (page) async {
+        try {
+          final response = await _client.get(
+            Uri.parse('${baseUrl}AdvancedSearch?level=$level&videoTitle=$encoded&staffTitle=$encoded&page=$page'),
+            headers: defaultHeaders,
+          );
+          if (response.statusCode == 200) {
+            final dynamic data = json.decode(response.body);
+            if (data is List) {
+              return data.map((item) => VideoItem.fromJson(item)).toList();
+            }
+          }
+        } catch (_) {}
+        return <VideoItem>[];
+      });
+
+      final resultsList = await Future.wait(futures);
+      final Map<String, VideoItem> uniqueItems = {};
+      for (var pageItems in resultsList) {
+        for (var item in pageItems) {
+          uniqueItems[item.id] = item;
         }
       }
+
+      final items = uniqueItems.values.toList();
+
+      // Relevance sort: direct title matches first, then newer releases
+      final qLower = trimmed.toLowerCase();
+      items.sort((a, b) {
+        final aTitle = a.enTitle.toLowerCase().contains(qLower) || a.arTitle.toLowerCase().contains(qLower);
+        final bTitle = b.enTitle.toLowerCase().contains(qLower) || b.arTitle.toLowerCase().contains(qLower);
+        if (aTitle && !bTitle) return -1;
+        if (!aTitle && bTitle) return 1;
+        final yearA = int.tryParse(a.year) ?? 0;
+        final yearB = int.tryParse(b.year) ?? 0;
+        return yearB.compareTo(yearA);
+      });
+
+      _putInCache(cacheKey, items, ttl: const Duration(minutes: 10));
+      return items;
     } catch (_) {}
     return [];
   }

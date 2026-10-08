@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../models/video_item.dart';
 import '../services/cinemana_api_service.dart';
+import '../services/storage_service.dart';
 import '../theme/tv_theme.dart';
 import '../widgets/tv_card.dart';
 import '../widgets/tv_keyboard.dart';
@@ -139,7 +141,8 @@ class _TVSearchScreenState extends State<TVSearchScreen> {
     });
 
     try {
-      final items = await CinemanaApiService.search(query);
+      final storage = context.read<StorageService>();
+      final items = await CinemanaApiService.search(query, level: storage.parentalLevel);
       if (!mounted || currentSession != _searchSessionId) return;
 
       setState(() {
