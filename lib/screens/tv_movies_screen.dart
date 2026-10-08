@@ -68,7 +68,7 @@ class _TVMoviesScreenState extends State<TVMoviesScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Movies Library',
+                  'الأفلام • Movies',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 26,
@@ -76,7 +76,7 @@ class _TVMoviesScreenState extends State<TVMoviesScreen> {
                   ),
                 ),
                 Text(
-                  '${_movies.length} titles loaded',
+                  '${_movies.length} عنوان • ${_movies.length} titles',
                   style: const TextStyle(color: TVColors.textMuted, fontSize: 13),
                 ),
               ],

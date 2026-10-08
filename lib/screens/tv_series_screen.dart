@@ -68,7 +68,7 @@ class _TVSeriesScreenState extends State<TVSeriesScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'TV Shows & Series',
+                  'المسلسلات • Series',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 26,
@@ -76,7 +76,7 @@ class _TVSeriesScreenState extends State<TVSeriesScreen> {
                   ),
                 ),
                 Text(
-                  '${_series.length} series loaded',
+                  '${_series.length} مسلسل • series',
                   style: const TextStyle(color: TVColors.textMuted, fontSize: 13),
                 ),
               ],

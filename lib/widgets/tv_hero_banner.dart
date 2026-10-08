@@ -94,38 +94,36 @@ class TVHeroBanner extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: TVColors.accent.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: TVColors.accent.withOpacity(0.5)),
+                        border: Border.all(color: TVColors.accent.withOpacity(0.6)),
                       ),
                       child: const Text(
-                        'FEATURED ON CINEMANA',
+                        'سينمانا مميز • FEATURED',
                         style: TextStyle(
                           color: TVColors.accent,
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
-                          letterSpacing: 1.0,
+                          letterSpacing: 0.8,
                         ),
                       ),
                     ),
-                    if (video.isSeries) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: TVColors.crimson.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: TVColors.crimson.withOpacity(0.5)),
-                        ),
-                        child: const Text(
-                          'SERIES',
-                          style: TextStyle(
-                            color: TVColors.crimson,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.0,
-                          ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.white.withOpacity(0.2)),
+                      ),
+                      child: Text(
+                        video.isSeries ? 'مسلسل • SERIES' : 'فيلم • MOVIE',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
                         ),
                       ),
-                    ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -269,14 +267,14 @@ class TVHeroBanner extends StatelessWidget {
                             children: [
                               Icon(
                                 Icons.play_arrow_rounded,
-                                color: isFocused ? Colors.black : Colors.black,
+                                color: isFocused ? Colors.black : Colors.white,
                                 size: 22,
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'Watch Now',
+                                'تشغيل • Play',
                                 style: TextStyle(
-                                  color: isFocused ? Colors.black : Colors.black,
+                                  color: isFocused ? Colors.black : Colors.white,
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -310,7 +308,7 @@ class TVHeroBanner extends StatelessWidget {
                               Icon(Icons.info_outline_rounded, color: Colors.white, size: 18),
                               SizedBox(width: 6),
                               Text(
-                                'Details',
+                                'التفاصيل • Details',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,

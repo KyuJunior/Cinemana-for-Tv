@@ -4,10 +4,10 @@ import '../theme/tv_theme.dart';
 import 'tv_focusable.dart';
 
 enum TVNavDestination {
-  search,
   home,
   movies,
   series,
+  search,
   favorites,
   settings,
 }
@@ -32,17 +32,17 @@ class _TVSideDockState extends State<TVSideDock> {
   bool _isExpanded = false;
 
   final List<_NavData> _destinations = const [
-    _NavData(destination: TVNavDestination.search, icon: Icons.search_rounded, label: 'Search'),
-    _NavData(destination: TVNavDestination.home, icon: Icons.home_rounded, label: 'Home'),
-    _NavData(destination: TVNavDestination.movies, icon: Icons.movie_outlined, label: 'Movies'),
-    _NavData(destination: TVNavDestination.series, icon: Icons.tv_rounded, label: 'TV Shows'),
-    _NavData(destination: TVNavDestination.favorites, icon: Icons.bookmark_border_rounded, label: 'Watchlist'),
-    _NavData(destination: TVNavDestination.settings, icon: Icons.settings_outlined, label: 'Settings'),
+    _NavData(destination: TVNavDestination.home, icon: Icons.home_rounded, label: 'الرئيسية', subLabel: 'Home'),
+    _NavData(destination: TVNavDestination.movies, icon: Icons.movie_outlined, label: 'الأفلام', subLabel: 'Movies'),
+    _NavData(destination: TVNavDestination.series, icon: Icons.tv_rounded, label: 'المسلسلات', subLabel: 'Series'),
+    _NavData(destination: TVNavDestination.search, icon: Icons.search_rounded, label: 'بحث', subLabel: 'Search'),
+    _NavData(destination: TVNavDestination.favorites, icon: Icons.bookmark_border_rounded, label: 'المفضلة', subLabel: 'Favorites'),
+    _NavData(destination: TVNavDestination.settings, icon: Icons.settings_outlined, label: 'الإعدادات', subLabel: 'Settings'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final width = _isExpanded ? 200.0 : 70.0;
+    final width = _isExpanded ? 220.0 : 70.0;
 
     return Focus(
       canRequestFocus: false,
@@ -57,7 +57,7 @@ class _TVSideDockState extends State<TVSideDock> {
         width: width,
         height: double.infinity,
         decoration: BoxDecoration(
-          color: _isExpanded ? const Color(0xF0070A11) : Colors.black.withOpacity(0.55),
+          color: _isExpanded ? const Color(0xF50A0D14) : Colors.black.withOpacity(0.6),
           border: Border(
             right: BorderSide(
               color: Colors.white.withOpacity(_isExpanded ? 0.12 : 0.05),
@@ -77,46 +77,55 @@ class _TVSideDockState extends State<TVSideDock> {
         child: Column(
           children: [
             const SizedBox(height: 24),
-            // Logo / Brand Icon
+            // Logo / Authentic Cinemana Brand Icon
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Row(
                 children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [TVColors.accent, Color(0xFF0072FF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.play_arrow_rounded, color: Colors.black, size: 28),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset(
+                      'assets/images/cinemana_logo.png',
+                      width: 38,
+                      height: 38,
+                      fit: BoxFit.contain,
                     ),
                   ),
                   if (_isExpanded) ...[
                     const SizedBox(width: 12),
                     const Expanded(
-                      child: Text(
-                        'CINEMANA',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.fade,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'سينمانا',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                            maxLines: 1,
+                          ),
+                          Text(
+                            'CINEMANA',
+                            style: TextStyle(
+                              color: TVColors.accent,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                            ),
+                            maxLines: 1,
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ],
               ),
             ),
-            const SizedBox(height: 36),
+            const SizedBox(height: 32),
 
             // Navigation Items
             Expanded(
@@ -141,25 +150,24 @@ class _TVSideDockState extends State<TVSideDock> {
                     },
                     child: TVFocusable(
                       scaleOnFocus: 1.05,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       onPressed: () {
                         widget.onDestinationSelected(item.destination);
-                        // Also jump focus into content when user clicks/selects an item
                         widget.onNavigateRight?.call();
                       },
                       builder: (context, isFocused) {
                         return Container(
-                          height: 46,
+                          height: 48,
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           decoration: BoxDecoration(
                             color: isFocused
                                 ? TVColors.cardFocused
-                                : (isSelected ? TVColors.accent.withOpacity(0.12) : Colors.transparent),
-                            borderRadius: BorderRadius.circular(10),
+                                : (isSelected ? TVColors.accent.withOpacity(0.15) : Colors.transparent),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: isFocused
                                   ? TVColors.focusBorder
-                                  : (isSelected ? TVColors.accent.withOpacity(0.4) : Colors.transparent),
+                                  : (isSelected ? TVColors.accent.withOpacity(0.5) : Colors.transparent),
                               width: 1.5,
                             ),
                           ),
@@ -175,15 +183,28 @@ class _TVSideDockState extends State<TVSideDock> {
                               if (_isExpanded) ...[
                                 const SizedBox(width: 14),
                                 Expanded(
-                                  child: Text(
-                                    item.label,
-                                    style: TextStyle(
-                                      color: isFocused || isSelected ? Colors.white : TVColors.textSecondary,
-                                      fontSize: 14,
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.fade,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        item.label,
+                                        style: TextStyle(
+                                          color: isFocused || isSelected ? Colors.white : TVColors.textSecondary,
+                                          fontSize: 14,
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                        ),
+                                        maxLines: 1,
+                                      ),
+                                      Text(
+                                        item.subLabel,
+                                        style: TextStyle(
+                                          color: isSelected ? TVColors.accent : TVColors.textMuted,
+                                          fontSize: 11,
+                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                        ),
+                                        maxLines: 1,
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -197,22 +218,39 @@ class _TVSideDockState extends State<TVSideDock> {
               ),
             ),
 
-            // Bottom Profile / Info
+            // Bottom Network Status Indicator
             Padding(
               padding: const EdgeInsets.only(bottom: 20, left: 14, right: 14),
               child: Row(
                 children: [
-                  const CircleAvatar(
-                    radius: 16,
-                    backgroundColor: TVColors.surface,
-                    child: Icon(Icons.tv_rounded, size: 18, color: TVColors.accent),
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: TVColors.surface,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.wifi_rounded, size: 14, color: Colors.greenAccent),
+                    ),
                   ),
                   if (_isExpanded) ...[
                     const SizedBox(width: 10),
                     const Expanded(
-                      child: Text(
-                        'Android TV',
-                        style: TextStyle(color: TVColors.textMuted, fontSize: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'شبكتي Shabakaty',
+                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            'Cinemana CTV',
+                            style: TextStyle(color: TVColors.textMuted, fontSize: 10),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -230,10 +268,12 @@ class _NavData {
   final TVNavDestination destination;
   final IconData icon;
   final String label;
+  final String subLabel;
 
   const _NavData({
     required this.destination,
     required this.icon,
     required this.label,
+    required this.subLabel,
   });
 }

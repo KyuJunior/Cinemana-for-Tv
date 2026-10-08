@@ -97,7 +97,7 @@ class _TVSearchScreenState extends State<TVSearchScreen> {
       setState(() {
         _isSearching = false;
         _results = [];
-        _message = 'Type at least 2 characters...';
+        _message = 'اكتب حرفين على الأقل للبحث... • Type at least 2 characters';
       });
       return;
     }
@@ -128,7 +128,7 @@ class _TVSearchScreenState extends State<TVSearchScreen> {
         _isSearching = false;
         _results = items;
         if (items.isEmpty) {
-          _message = 'No results found for "$query"';
+          _message = 'لم يتم العثور على نتائج لـ "$query" • No results found';
         }
       });
     } catch (e) {
@@ -199,7 +199,7 @@ class _TVSearchScreenState extends State<TVSearchScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Search Cinemana',
+                      'البحث في سينمانا • Search',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 26,
@@ -226,10 +226,10 @@ class _TVSearchScreenState extends State<TVSearchScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              _query.isEmpty ? 'Type title using remote or keyboard...' : _query,
+                              _query.isEmpty ? 'ابحث عن فيلم أو مسلسل... • Type to search' : _query,
                               style: TextStyle(
                                 color: _query.isEmpty ? TVColors.textMuted : Colors.white,
-                                fontSize: 16,
+                                fontSize: 15,
                                 fontWeight: _query.isEmpty ? FontWeight.normal : FontWeight.bold,
                               ),
                               maxLines: 1,
@@ -275,8 +275,8 @@ class _TVSearchScreenState extends State<TVSearchScreen> {
                       children: [
                         Text(
                           isShowingSuggestions
-                              ? 'Trending & Popular Suggestions'
-                              : 'Results (${_results.length})',
+                              ? 'أحدث الأفلام والمقترحات • Trending'
+                              : 'نتائج البحث (${_results.length}) • Results',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -285,7 +285,7 @@ class _TVSearchScreenState extends State<TVSearchScreen> {
                         ),
                         if (_isSearching)
                           const Text(
-                            'Searching...',
+                            'جاري البحث... • Searching...',
                             style: TextStyle(
                               color: TVColors.accent,
                               fontSize: 13,

@@ -316,14 +316,14 @@ class _TVDetailsScreenState extends State<TVDetailsScreen> {
                             children: [
                               Icon(
                                 Icons.play_arrow_rounded,
-                                color: Colors.black,
+                                color: isFocused ? Colors.black : Colors.white,
                                 size: 24,
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                savedPos > 30 ? 'Resume Playback' : 'Play',
-                                style: const TextStyle(
-                                  color: Colors.black,
+                                savedPos > 30 ? 'استئناف • Resume' : 'تشغيل • Play',
+                                style: TextStyle(
+                                  color: isFocused ? Colors.black : Colors.white,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -354,13 +354,13 @@ class _TVDetailsScreenState extends State<TVDetailsScreen> {
                           child: Row(
                             children: [
                               Icon(
-                                isFav ? Icons.bookmark_added_rounded : Icons.bookmark_add_outlined,
+                                isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                                 color: isFav ? TVColors.accent : Colors.white,
                                 size: 20,
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                isFav ? 'In Watchlist' : 'Add to Watchlist',
+                                isFav ? 'في المفضلة • In Favorites' : 'إضافة للمفضلة • Add to Favorites',
                                 style: TextStyle(
                                   color: isFav ? TVColors.accent : Colors.white,
                                   fontSize: 14,
@@ -395,7 +395,7 @@ class _TVDetailsScreenState extends State<TVDetailsScreen> {
                 // If Series: Episodes and Seasons Section
                 if (widget.video.isSeries) ...[
                   const Text(
-                    'Episodes',
+                    'الحلقات • Episodes',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 22,
@@ -442,7 +442,7 @@ class _TVDetailsScreenState extends State<TVDetailsScreen> {
                                 ),
                                 child: Center(
                                   child: Text(
-                                    'Season $seasonNum',
+                                    'الموسم $seasonNum',
                                     style: TextStyle(
                                       color: isCurrent || isFocused ? Colors.white : TVColors.textSecondary,
                                       fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
@@ -559,7 +559,7 @@ class _TVDetailsScreenState extends State<TVDetailsScreen> {
                 // Related Titles
                 if (_relatedVideos.isNotEmpty)
                   TVShelf(
-                    title: 'More Like This',
+                    title: 'أعمال مشابهة • More Like This',
                     items: _relatedVideos,
                     onSelect: (item) {
                       Navigator.of(context).pushReplacement(

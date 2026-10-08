@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../services/storage_service.dart';
 import '../services/update_service.dart';
@@ -14,10 +15,27 @@ class TVSettingsScreen extends StatefulWidget {
 
 class _TVSettingsScreenState extends State<TVSettingsScreen> {
   bool _isCheckingUpdate = false;
-  String _updateStatus = 'Version 1.0.0 (Latest)';
+  String _updateStatus = 'الإصدار الحالي: v1.0.2 • Version 1.0.2';
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
   String _downloadStatusText = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() {
+          _updateStatus = 'الإصدار الحالي: v${info.version} • Version ${info.version}';
+        });
+      }
+    } catch (_) {}
+  }
 
   Future<void> _checkUpdate() async {
     setState(() {
@@ -193,7 +211,7 @@ class _TVSettingsScreenState extends State<TVSettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Settings & Preferences',
+              'الإعدادات • Settings',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 26,
@@ -202,15 +220,15 @@ class _TVSettingsScreenState extends State<TVSettingsScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Customize video quality, parental controls, updates, and network diagnostics',
+              'تخصيص جودة الفيديو، التحديثات، والتفضيلات • Customize video quality, updates, and preferences',
               style: TextStyle(color: TVColors.textMuted, fontSize: 14),
             ),
             const SizedBox(height: 28),
 
             // In-App Software Update Section
             _buildSection(
-              title: 'Software Updates (GitHub Releases)',
-              subtitle: 'Check for new releases on github.com/KyuJunior/Cinemana-for-Tv',
+              title: 'تحديثات التطبيق • Software Updates',
+              subtitle: 'التحقق من الإصدارات الجديدة عبر GitHub Releases',
               child: Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
@@ -257,20 +275,27 @@ class _TVSettingsScreenState extends State<TVSettingsScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (_isCheckingUpdate) ...[
-                                const SizedBox(
+                                SizedBox(
                                   width: 14,
                                   height: 14,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: isFocused ? Colors.black : Colors.white,
+                                  ),
                                 ),
                                 const SizedBox(width: 8),
                               ] else ...[
-                                const Icon(Icons.refresh_rounded, size: 18, color: Colors.black),
+                                Icon(
+                                  Icons.refresh_rounded,
+                                  size: 18,
+                                  color: isFocused ? Colors.black : Colors.white,
+                                ),
                                 const SizedBox(width: 6),
                               ],
                               Text(
-                                _isCheckingUpdate ? 'Checking...' : 'Check Updates',
-                                style: const TextStyle(
-                                  color: Colors.black,
+                                _isCheckingUpdate ? 'جاري الفحص • Checking...' : 'فحص التحديثات • Check Updates',
+                                style: TextStyle(
+                                  color: isFocused ? Colors.black : Colors.white,
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -288,8 +313,8 @@ class _TVSettingsScreenState extends State<TVSettingsScreen> {
 
             // Preferred Video Quality
             _buildSection(
-              title: 'Default Video Quality',
-              subtitle: 'Preferred resolution when starting playback',
+              title: 'جودة الفيديو الافتراضية • Default Video Quality',
+              subtitle: 'الدقة المفضلة عند بدء التشغيل • Preferred playback resolution',
               child: Row(
                 children: [
                   for (var q in ['2160p (4K)', '1080p (FHD)', '720p (HD)', '480p (SD)'])
@@ -311,8 +336,8 @@ class _TVSettingsScreenState extends State<TVSettingsScreen> {
 
             // Preferred Subtitle Language
             _buildSection(
-              title: 'Preferred Subtitle Language',
-              subtitle: 'Default subtitle track automatically loaded',
+              title: 'لغة الترجمة المفضلة • Preferred Subtitles',
+              subtitle: 'تحديد لغة الترجمة التلقائية • Automatic subtitle track',
               child: Row(
                 children: [
                   _buildChoiceChip(
@@ -333,24 +358,24 @@ class _TVSettingsScreenState extends State<TVSettingsScreen> {
 
             // Parental Level
             _buildSection(
-              title: 'Parental Guidance Filter',
-              subtitle: 'Filter titles according to maturity rating',
+              title: 'المستوى العائلي • Parental Guidance',
+              subtitle: 'فلترة المحتوى حسب التصنيف العمري • Filter content by maturity rating',
               child: Row(
                 children: [
                   _buildChoiceChip(
-                    label: 'Level 0 (Unrestricted / All)',
+                    label: 'المستوى 0 (مفتوح / غير مقيد • All)',
                     isSelected: storage.parentalLevel == 0,
                     onSelect: () => storage.setParentalLevel(0),
                   ),
                   const SizedBox(width: 12),
                   _buildChoiceChip(
-                    label: 'Level 1 (Family / PG-13)',
+                    label: 'المستوى 1 (عائلي • PG-13)',
                     isSelected: storage.parentalLevel == 1,
                     onSelect: () => storage.setParentalLevel(1),
                   ),
                   const SizedBox(width: 12),
                   _buildChoiceChip(
-                    label: 'Level 2 (Kids Safe)',
+                    label: 'المستوى 2 (أطفال • Kids Safe)',
                     isSelected: storage.parentalLevel == 2,
                     onSelect: () => storage.setParentalLevel(2),
                   ),
@@ -361,8 +386,8 @@ class _TVSettingsScreenState extends State<TVSettingsScreen> {
 
             // Network & Diagnostics
             _buildSection(
-              title: 'Network & Cinemana ISP Status',
-              subtitle: 'Local connection check to Earthlink / Shabakaty CDN',
+              title: 'حالة الشبكة والاتصال • Network & ISP Status',
+              subtitle: 'التحقق من الاتصال بشبكة سينمانا وسيرفرات شبكتي • Earthlink / Shabakaty CDN',
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -377,7 +402,7 @@ class _TVSettingsScreenState extends State<TVSettingsScreen> {
                         Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 20),
                         SizedBox(width: 10),
                         Text(
-                          'Cinemana API (cinemana.shabakaty.com): Connected',
+                          'سيرفر سينمانا (cinemana.shabakaty.com): متصل • Connected',
                           style: TextStyle(color: Colors.white, fontSize: 14),
                         ),
                       ],
@@ -388,7 +413,7 @@ class _TVSettingsScreenState extends State<TVSettingsScreen> {
                         Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 20),
                         SizedBox(width: 10),
                         Text(
-                          'High-Speed Media CDN (cdn.shabakaty.com): Online',
+                          'سيرفر الوسائط عالي السرعة (cdn.shabakaty.com): نشط • Online',
                           style: TextStyle(color: Colors.white, fontSize: 14),
                         ),
                       ],
@@ -399,10 +424,50 @@ class _TVSettingsScreenState extends State<TVSettingsScreen> {
                         Icon(Icons.info_outline_rounded, color: TVColors.accent, size: 20),
                         SizedBox(width: 10),
                         Text(
-                          'Platform Engine: Flutter Leanback TV with MediaKit (Hardware libmpv)',
+                          'محرك العرض: Flutter Leanback TV مع MediaKit (libmpv عتادي)',
                           style: TextStyle(color: TVColors.textSecondary, fontSize: 13),
                         ),
                       ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
+
+            // Legal & Privacy Notice
+            _buildSection(
+              title: 'إشعار الشروط والخصوصية • Legal & Privacy Notice',
+              subtitle: 'معلومات الترخيص والاستخدام القانوني • Terms of service & privacy details',
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: TVColors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.policy_rounded, color: TVColors.textMuted, size: 20),
+                        SizedBox(width: 10),
+                        Text(
+                          'سياسة الاستخدام وحقوق الملكية • Terms of Service',
+                          style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'تطبيق سينمانا للتلفاز (Cinemana for TV) هو عميل تشغيل مخصص للوصول إلى شبكة سينمانا التابعة لشركة شبكتي / إيرثلنك عبر الشبكات المحلية المعتمدة. جميع حقوق الملكية الفكرية والعلامات التجارية والمحتوى الإعلامي تعود لأصحابها الأصليين. هذا التطبيق مفتوح المصدر ومستقل ولا يقوم باستضافة أو تخزين أي مواد رقمية على خوادم خاصة به.',
+                      style: TextStyle(color: TVColors.textSecondary, fontSize: 12.5, height: 1.5),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Cinemana for TV is a client designed for accessing Shabakaty Cinemana services within authorized ISP networks. All trademarks, logos, and media assets belong to their respective copyright owners. This application is an independent open-source client that does not host or distribute media directly.',
+                      style: TextStyle(color: TVColors.textMuted, fontSize: 11.5, height: 1.4),
                     ),
                   ],
                 ),

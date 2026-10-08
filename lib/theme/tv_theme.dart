@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 
 class TVColors {
-  static const Color background = Color(0xFF070A11);
-  static const Color surface = Color(0xFF0F172A);
-  static const Color card = Color(0xFF161F33);
-  static const Color cardFocused = Color(0xFF1E293B);
+  static const Color background = Color(0xFF0A0D14);
+  static const Color surface = Color(0xFF121722);
+  static const Color card = Color(0xFF171E2B);
+  static const Color cardFocused = Color(0xFF222B3D);
   
-  static const Color accent = Color(0xFF00D2FF);
-  static const Color accentSecondary = Color(0xFF38BDF8);
+  // Cinemana Original Brand Palette (Red & Amber Gold)
+  static const Color accent = Color(0xFFE51937);
+  static const Color accentSecondary = Color(0xFFFF334B);
+  static const Color brandRed = Color(0xFFE51937);
   static const Color gold = Color(0xFFFFB800);
-  static const Color crimson = Color(0xFFE50914);
+  static const Color crimson = Color(0xFFE51937);
 
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF94A3B8);
   static const Color textMuted = Color(0xFF64748B);
   
-  static const Color focusBorder = Color(0xFF00D2FF);
-  static const Color focusGlow = Color(0x6600D2FF);
+  static const Color focusBorder = Color(0xFFE51937);
+  static const Color focusGlow = Color(0x66E51937);
   static const Color focusGlowGold = Color(0x55FFB800);
 }
 

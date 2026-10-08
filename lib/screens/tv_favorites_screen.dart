@@ -28,7 +28,7 @@ class TVFavoritesScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'My Library',
+              'مكتبتي • My Library',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 26,
@@ -44,7 +44,7 @@ class TVFavoritesScreen extends StatelessWidget {
                   Icon(Icons.history_rounded, color: TVColors.accent, size: 20),
                   SizedBox(width: 8),
                   Text(
-                    'Continue Watching',
+                    'متابعة المشاهدة • Continue Watching',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -104,7 +104,7 @@ class TVFavoritesScreen extends StatelessWidget {
                 const Icon(Icons.bookmark_rounded, color: TVColors.gold, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Watchlist (${favorites.length})',
+                  'قائمتي والمفضلة • Favorites (${favorites.length})',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -129,12 +129,12 @@ class TVFavoritesScreen extends StatelessWidget {
                     Icon(Icons.bookmark_border_rounded, size: 48, color: Colors.white.withOpacity(0.2)),
                     const SizedBox(height: 12),
                     const Text(
-                      'Your Watchlist is empty',
+                      'قائمتك فارغة • Your Watchlist is empty',
                       style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Add titles to your watchlist by selecting "Add to Watchlist" on any title details screen.',
+                      'أضف أعمالك بالنقر على "إضافة للمفضلة" في صفحة تفاصيل العمل • Add titles by selecting "Add to Favorites"',
                       style: TextStyle(color: TVColors.textMuted, fontSize: 13),
                     ),
                   ],

@@ -654,7 +654,7 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> with WidgetsBindingObse
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Skip Intro',
+                                'تخطي المقدمة • Skip Intro',
                                 style: TextStyle(
                                   color: isFocused ? Colors.black : Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -787,7 +787,7 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> with WidgetsBindingObse
                                   _buildPlayerButton(
                                     focusNode: _playPauseFocus,
                                     icon: _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                    label: _isPlaying ? 'Pause' : 'Play',
+                                    label: _isPlaying ? 'إيقاف • Pause' : 'تشغيل • Play',
                                     isProminent: true,
                                     onPressed: _togglePlayPause,
                                   ),
@@ -805,7 +805,7 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> with WidgetsBindingObse
                                   if (_availableStreams.isNotEmpty) ...[
                                     _buildPlayerButton(
                                       icon: Icons.high_quality_rounded,
-                                      label: _currentStream?.resolution ?? 'Quality',
+                                      label: _currentStream?.resolution ?? 'الجودة',
                                       onPressed: _showQualityPicker,
                                     ),
                                     const SizedBox(width: 16),
@@ -814,7 +814,7 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> with WidgetsBindingObse
                                   // Subtitle Selector
                                   _buildPlayerButton(
                                     icon: Icons.subtitles_rounded,
-                                    label: _currentSubtitle != null ? _currentSubtitle!.type.toUpperCase() : 'CC',
+                                    label: _currentSubtitle != null ? _currentSubtitle!.type.toUpperCase() : 'الترجمة',
                                     onPressed: _showSubtitlePicker,
                                   ),
 
@@ -823,7 +823,7 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> with WidgetsBindingObse
                                     const SizedBox(width: 16),
                                     _buildPlayerButton(
                                       icon: Icons.skip_next_rounded,
-                                      label: 'Skip Intro',
+                                      label: 'تخطي المقدمة • Skip Intro',
                                       isProminent: true,
                                       onPressed: _skipIntro,
                                     ),
@@ -882,7 +882,7 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> with WidgetsBindingObse
                 icon,
                 color: isFocused
                     ? (isProminent ? Colors.black : TVColors.accent)
-                    : (isProminent ? Colors.black : Colors.white),
+                    : Colors.white,
                 size: isProminent ? 24 : 18,
               ),
               const SizedBox(width: 6),
@@ -891,7 +891,7 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> with WidgetsBindingObse
                 style: TextStyle(
                   color: isFocused
                       ? (isProminent ? Colors.black : Colors.white)
-                      : (isProminent ? Colors.black : Colors.white),
+                      : Colors.white,
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),
