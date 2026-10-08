@@ -42,6 +42,8 @@ class StorageService extends ChangeNotifier {
   static const String _keyPreferredQuality = 'preferred_quality';
   static const String _keyParentalLevel = 'parental_level';
   static const String _keyLanguage = 'preferred_language';
+  static const String _keyHardwareDecoding = 'hardware_decoding';
+  static const String _keyBufferSizeMb = 'buffer_size_mb';
 
   late SharedPreferences _prefs;
   final Map<String, VideoItem> _favorites = {};
@@ -50,10 +52,14 @@ class StorageService extends ChangeNotifier {
   String _preferredQuality = '1080p';
   int _parentalLevel = 0;
   String _preferredLanguage = 'ar';
+  String _hardwareDecoding = 'mediacodec';
+  int _bufferSizeMb = 128;
 
   String get preferredQuality => _preferredQuality;
   int get parentalLevel => _parentalLevel;
   String get preferredLanguage => _preferredLanguage;
+  String get hardwareDecoding => _hardwareDecoding;
+  int get bufferSizeMb => _bufferSizeMb;
   List<VideoItem> get favorites => _favorites.values.toList();
   List<PlaybackHistoryItem> get history => List.unmodifiable(_history);
 
@@ -62,6 +68,8 @@ class StorageService extends ChangeNotifier {
     _preferredQuality = _prefs.getString(_keyPreferredQuality) ?? '1080p';
     _parentalLevel = _prefs.getInt(_keyParentalLevel) ?? 0;
     _preferredLanguage = _prefs.getString(_keyLanguage) ?? 'ar';
+    _hardwareDecoding = _prefs.getString(_keyHardwareDecoding) ?? 'mediacodec';
+    _bufferSizeMb = _prefs.getInt(_keyBufferSizeMb) ?? 128;
 
     // Load favorites
     final favList = _prefs.getStringList(_keyFavorites) ?? [];
@@ -148,4 +156,17 @@ class StorageService extends ChangeNotifier {
     await _prefs.setString(_keyLanguage, lang);
     notifyListeners();
   }
+
+  Future<void> setHardwareDecoding(String mode) async {
+    _hardwareDecoding = mode;
+    await _prefs.setString(_keyHardwareDecoding, mode);
+    notifyListeners();
+  }
+
+  Future<void> setBufferSizeMb(int mb) async {
+    _bufferSizeMb = mb;
+    await _prefs.setInt(_keyBufferSizeMb, mb);
+    notifyListeners();
+  }
 }
+

@@ -60,8 +60,22 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> with WidgetsBindingObse
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _player = Player();
-    _controller = VideoController(_player);
+    final storage = Provider.of<StorageService>(context, listen: false);
+    final bufferBytes = storage.bufferSizeMb * 1024 * 1024;
+
+    _player = Player(
+      configuration: PlayerConfiguration(
+        bufferSize: bufferBytes,
+        logLevel: MPVLogLevel.error,
+      ),
+    );
+    _controller = VideoController(
+      _player,
+      configuration: VideoControllerConfiguration(
+        hwdec: storage.hardwareDecoding,
+        enableHardwareAcceleration: true,
+      ),
+    );
 
     _player.stream.position.listen((pos) {
       if (mounted) {
@@ -202,6 +216,24 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> with WidgetsBindingObse
   }
 
   Future<void> _startPlayback(String url, {Duration? startPosition}) async {
+    try {
+      final platform = _player.platform;
+      if (platform is dynamic) {
+        final storage = context.read<StorageService>();
+        final bufferBytes = storage.bufferSizeMb * 1024 * 1024;
+        await platform.setProperty('demuxer-max-bytes', bufferBytes.toString());
+        await platform.setProperty('demuxer-max-back-bytes', (bufferBytes ~/ 2).toString());
+        await platform.setProperty('demuxer-readahead-secs', '45');
+        await platform.setProperty('cache-secs', '45');
+        await platform.setProperty('network-timeout', '15');
+        await platform.setProperty('stream-buffer-size', '4194304');
+        await platform.setProperty('force-seekable', 'yes');
+        await platform.setProperty('hr-seek', 'no');
+        await platform.setProperty('hr-seek-framedrop', 'yes');
+        await platform.setProperty('vd-lavc-threads', '4');
+      }
+    } catch (_) {}
+
     await _player.open(Media(url));
 
     if (startPosition != null && startPosition.inSeconds > 5) {

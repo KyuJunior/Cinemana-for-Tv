@@ -5,6 +5,7 @@ import '../services/storage_service.dart';
 import '../services/update_service.dart';
 import '../theme/tv_theme.dart';
 import '../widgets/tv_focusable.dart';
+import '../widgets/tv_speed_test_dialog.dart';
 
 class TVSettingsScreen extends StatefulWidget {
   const TVSettingsScreen({super.key});
@@ -384,50 +385,138 @@ class _TVSettingsScreenState extends State<TVSettingsScreen> {
             ),
             const SizedBox(height: 28),
 
+            // Video Playback & 4K Acceleration Settings
+            _buildSection(
+              title: 'تسريع تشغيل الفيديو والـ 4K • Playback & 4K Acceleration',
+              subtitle: 'حل مشكلة تقطيع الـ 4K عبر تفعيل فك التشفير العتادي وتكبير ذاكرة التخزين المؤقت',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'وضع فك التشفير • Hardware Decoder Mode:',
+                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _buildChoiceChip(
+                        label: 'MediaCodec (عتادي - مُستحسن للـ 4K)',
+                        isSelected: storage.hardwareDecoding == 'mediacodec',
+                        onSelect: () => storage.setHardwareDecoding('mediacodec'),
+                      ),
+                      const SizedBox(width: 12),
+                      _buildChoiceChip(
+                        label: 'MediaCodec Copy (شاشات قديمة)',
+                        isSelected: storage.hardwareDecoding == 'mediacodec-copy',
+                        onSelect: () => storage.setHardwareDecoding('mediacodec-copy'),
+                      ),
+                      const SizedBox(width: 12),
+                      _buildChoiceChip(
+                        label: 'تلقائي • Auto',
+                        isSelected: storage.hardwareDecoding == 'auto',
+                        onSelect: () => storage.setHardwareDecoding('auto'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'حجم ذاكرة التخزين المسبق • Demuxer Buffer Cache:',
+                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _buildChoiceChip(
+                        label: '128 MB (فائق للـ 4K - موصى به)',
+                        isSelected: storage.bufferSizeMb == 128,
+                        onSelect: () => storage.setBufferSizeMb(128),
+                      ),
+                      const SizedBox(width: 12),
+                      _buildChoiceChip(
+                        label: '64 MB (متوسط)',
+                        isSelected: storage.bufferSizeMb == 64,
+                        onSelect: () => storage.setBufferSizeMb(64),
+                      ),
+                      const SizedBox(width: 12),
+                      _buildChoiceChip(
+                        label: '32 MB (افتراضي)',
+                        isSelected: storage.bufferSizeMb == 32,
+                        onSelect: () => storage.setBufferSizeMb(32),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+
             // Network & Diagnostics
             _buildSection(
-              title: 'حالة الشبكة والاتصال • Network & ISP Status',
-              subtitle: 'التحقق من الاتصال بشبكة سينمانا وسيرفرات شبكتي • Earthlink / Shabakaty CDN',
+              title: 'حالة الشبكة وفحص السرعة • Network Speed & Ping',
+              subtitle: 'اختبار سرعة وبينغ الاتصال بسيرفرات سينمانا لمعرفة مدى جاهزية اتصالك لـ 4K',
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
                   color: TVColors.surface,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.white.withOpacity(0.08)),
                 ),
-                child: const Column(
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 20),
-                        SizedBox(width: 10),
-                        Text(
-                          'سيرفر سينمانا (cinemana.shabakaty.com): متصل • Connected',
-                          style: TextStyle(color: Colors.white, fontSize: 14),
-                        ),
-                      ],
+                    const CircleAvatar(
+                      radius: 20,
+                      backgroundColor: TVColors.card,
+                      child: Icon(Icons.speed_rounded, color: TVColors.accent, size: 22),
                     ),
-                    SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 20),
-                        SizedBox(width: 10),
-                        Text(
-                          'سيرفر الوسائط عالي السرعة (cdn.shabakaty.com): نشط • Online',
-                          style: TextStyle(color: Colors.white, fontSize: 14),
-                        ),
-                      ],
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'أداة قياس سرعة واستجابة سينمانا • Cinemana 4K Speed Benchmark',
+                            style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'فحص زمن الاستجابة (Ping) وسرعة التحميل الفعلي لمعرفة إمكانية تشغيل 4K بدون تقطيع',
+                            style: TextStyle(color: TVColors.textSecondary, fontSize: 13),
+                          ),
+                        ],
+                      ),
                     ),
-                    SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Icon(Icons.info_outline_rounded, color: TVColors.accent, size: 20),
-                        SizedBox(width: 10),
-                        Text(
-                          'محرك العرض: Flutter Leanback TV مع MediaKit (libmpv عتادي)',
-                          style: TextStyle(color: TVColors.textSecondary, fontSize: 13),
-                        ),
-                      ],
+                    TVFocusable(
+                      scaleOnFocus: 1.08,
+                      borderRadius: BorderRadius.circular(8),
+                      onPressed: () => TVSpeedTestDialog.show(context),
+                      builder: (context, isFocused) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isFocused ? Colors.white : TVColors.accent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.network_check_rounded,
+                                size: 18,
+                                color: isFocused ? Colors.black : Colors.white,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'بدء اختبار السرعة • Run Speed Test',
+                                style: TextStyle(
+                                  color: isFocused ? Colors.black : Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
