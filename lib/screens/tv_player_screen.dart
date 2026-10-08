@@ -217,20 +217,20 @@ class _TVPlayerScreenState extends State<TVPlayerScreen> with WidgetsBindingObse
 
   Future<void> _startPlayback(String url, {Duration? startPosition}) async {
     try {
-      final platform = _player.platform;
-      if (platform is dynamic) {
+      final dynamic nativePlatform = _player.platform;
+      if (nativePlatform != null) {
         final storage = context.read<StorageService>();
         final bufferBytes = storage.bufferSizeMb * 1024 * 1024;
-        await platform.setProperty('demuxer-max-bytes', bufferBytes.toString());
-        await platform.setProperty('demuxer-max-back-bytes', (bufferBytes ~/ 2).toString());
-        await platform.setProperty('demuxer-readahead-secs', '45');
-        await platform.setProperty('cache-secs', '45');
-        await platform.setProperty('network-timeout', '15');
-        await platform.setProperty('stream-buffer-size', '4194304');
-        await platform.setProperty('force-seekable', 'yes');
-        await platform.setProperty('hr-seek', 'no');
-        await platform.setProperty('hr-seek-framedrop', 'yes');
-        await platform.setProperty('vd-lavc-threads', '4');
+        await nativePlatform.setProperty('demuxer-max-bytes', bufferBytes.toString());
+        await nativePlatform.setProperty('demuxer-max-back-bytes', (bufferBytes ~/ 2).toString());
+        await nativePlatform.setProperty('demuxer-readahead-secs', '45');
+        await nativePlatform.setProperty('cache-secs', '45');
+        await nativePlatform.setProperty('network-timeout', '15');
+        await nativePlatform.setProperty('stream-buffer-size', '4194304');
+        await nativePlatform.setProperty('force-seekable', 'yes');
+        await nativePlatform.setProperty('hr-seek', 'no');
+        await nativePlatform.setProperty('hr-seek-framedrop', 'yes');
+        await nativePlatform.setProperty('vd-lavc-threads', '4');
       }
     } catch (_) {}
 
